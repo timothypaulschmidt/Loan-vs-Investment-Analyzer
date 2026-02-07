@@ -50,7 +50,7 @@ interest_paid = total_paid - principal_paid
 
 # Scenarios
 scenarios = {
-    "Keep Mortgage": {"payoff": 0},
+    "Keep Loan": {"payoff": 0},
     # "Half Payoff": {"payoff": loan_balance / 2},
     "Partial Payoff": {"payoff": partial_payoff},  # Pay toward loan at begining
     "Full Payoff": {"payoff": loan_balance}
@@ -82,7 +82,7 @@ for name, params in scenarios.items():
 
 df = pd.DataFrame(results)
 print(df)
-print(f"Keep Mortgage Monthly Payment: ${payment:,.2f}")
-print(f"Keep Mortgage Principal Paid On Loan After {scenario_years} Years: ${principal_paid:,.2f}")
-print(f"Keep Mortgage Interest Paid On Loan After {scenario_years} Years: ${interest_paid:,.2f}")
+print(f"Keep Loan Monthly Payment: ${payment:,.2f}")
+print(f"Keep Loan Principal Paid On Loan After {scenario_years} Years: ${principal_paid:,.2f}")
+print(f"Keep Loan Interest Paid On Loan After {scenario_years} Years: ${interest_paid:,.2f}")
 
