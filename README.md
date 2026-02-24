@@ -2,6 +2,13 @@
 
 This is my Python project with proper structure.
 
+## Quick Start
+Get started quickly! See the [Initial Deployment Guide](docs/INITIAL_DEPLOYMENT.md).
+
+## Documentation
+- 📋 [Initial Deployment Checklist](docs/INITIAL_DEPLOYMENT.md) - Complete setup guide
+- 🔄 [Update Cycle](docs/UPDATE_CYCLE.md) - How to update and redeploy
+
 ## Setup (Traditional)
 1. Activate virtual environment: `venv\Scripts\activate`
 2. Install dependencies: `pip install -r requirements.txt`
@@ -12,5 +19,5 @@ This is my Python project with proper structure.
 2. Run the container: `docker run -it loan-vs-investment-analyzer`
 
 ## Push to Docker Hub
-1. Tag: `docker tag Loan-vs-Investment-Analyzer yourusername/Loan-vs-Investment-Analyzer`
-2. Push: `docker push yourusername/Loan-vs-Investment-Analyzer`
+1. Tag: `docker tag loan-vs-investment-analyzer timothypaulschmidt/loan-vs-investment-analyzer`
+2. Push: `docker push timothypaulschmidt/loan-vs-investment-analyzer`
