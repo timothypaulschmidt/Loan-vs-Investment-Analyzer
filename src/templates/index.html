@@ -100,6 +100,18 @@
     .stat .label { font-size: .8rem; color: var(--muted); }
     .stat .value { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
     .fine { color: var(--muted); font-size: .8rem; margin-top: 16px; }
+    .fine b { color: var(--text); }
+    td .sub { display: block; font-size: .75rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
+
+    /* Radio choice: after a partial payoff */
+    .choice { border: 0; margin: 0 0 12px; padding: 0; }
+    .choice legend { font-size: .9rem; font-weight: 600; margin-bottom: 6px; padding: 0; }
+    .choice label { display: flex; gap: 10px; align-items: flex-start; border: 1px solid var(--line);
+                    border-radius: 8px; padding: 8px 10px; margin-bottom: 6px; cursor: pointer; }
+    .choice label:has(input:checked) { border-color: var(--accent); background: var(--accent-soft); }
+    .choice input { margin-top: 4px; accent-color: var(--accent); }
+    .choice b { display: block; font-size: .9rem; }
+    .choice small { color: var(--muted); font-size: .8rem; }
   </style>
 </head>
 <body>
@@ -144,6 +156,17 @@
           </div>
           {% if f.name in errors %}<div class="error">{{ errors[f.name] }}</div>{% endif %}
         </div>
+        {#- Right after the partial payoff amount: what happens to the loan afterwards -#}
+        {% if f.name == 'partial_payoff' %}
+          {% set mode = form.get('payoff_mode', 'sooner') %}
+          <fieldset class="choice">
+            <legend>After a partial payoff</legend>
+            <label><input type="radio" name="payoff_mode" value="sooner" {{ 'checked' if mode != 'recast' }}>
+              <span><b>Same payment, pay off sooner</b><small>Most loans work this way</small></span></label>
+            <label><input type="radio" name="payoff_mode" value="recast" {{ 'checked' if mode == 'recast' }}>
+              <span><b>Lower my payment</b><small>Only if your lender recasts the loan</small></span></label>
+          </fieldset>
+        {% endif %}
       {% endfor %}
       <button type="submit">Analyze</button>
     </form>
@@ -157,7 +180,9 @@
         <div class="inputs-summary">
           <span class="chip">Loan <b>${{ '{:,.0f}'.format(v.loan_balance) }}</b> at <b>{{ '{:g}'.format(v.interest_rate * 100) }}%</b> for <b>{{ v.loan_years }} yrs</b></span>
           <span class="chip">Invested <b>${{ '{:,.0f}'.format(v.investment_balance) }}</b> at <b>{{ '{:g}'.format(v.investment_return * 100) }}%</b>/yr</span>
-          <span class="chip">Partial payoff <b>${{ '{:,.0f}'.format(v.partial_payoff) }}</b></span>
+          <span class="chip">Partial payoff <b>${{ '{:,.0f}'.format(v.partial_payoff) }}</b>,
+            <b>{{ 'lower payment' if v.payoff_mode == 'recast' else 'pay off sooner' }}</b></span>
+          <span class="chip">Monthly budget <b>${{ '{:,.2f}'.format(result.payment) }}</b> in every scenario</span>
           <span class="chip">Looking <b>{{ v.scenario_years }} yrs</b> ahead</span>
         </div>
         {% if result.note %}<div class="note">{{ result.note }}</div>{% endif %}
@@ -166,8 +191,10 @@
             <thead>
               <tr>
                 <th>Scenario</th>
-                <th>Paid toward loan</th>
+                <th>Paid toward loan today</th>
+                <th>Monthly loan payment</th>
                 <th>Investment after {{ result.years }}Y</th>
+                <th>Freed-up payments invested</th>
                 <th>Loan balance after {{ result.years }}Y</th>
                 <th>Net worth after {{ result.years }}Y</th>
               </tr>
@@ -175,11 +202,14 @@
             <tbody>
               {% for r in result.rows %}
               <tr class="{{ 'best' if r.name == result.best }}">
-                <td>{{ r.name }}{% if r.name == result.best %}<span class="badge">Highest net worth</span>{% endif %}</td>
+                <td>{{ r.name }}{% if r.name == result.best %}<span class="badge">Highest net worth</span>{% endif %}
+                  {% if r.payoff_text %}<small class="sub">{{ r.payoff_text }}</small>{% endif %}</td>
                 <td>{{ money(r.payoff) }}</td>
+                <td>{{ money(r.monthly_payment) }}</td>
                 <td>{{ money(r.investment) }}</td>
+                <td>{{ money(r.payments_invested) }}</td>
                 <td>{{ money(r.loan) }}</td>
-                <td>{{ money(r.net) }}</td>
+                <td><strong>{{ money(r.net) }}</strong></td>
               </tr>
               {% endfor %}
             </tbody>
@@ -193,8 +223,12 @@
           <div class="stat"><div class="label">Interest paid in {{ result.years }} years</div>
             <div class="value">{{ money(result.interest_paid) }}</div></div>
         </div>
-        <p class="fine">Net worth = investment value minus loan balance. Monthly loan payments are not yet
-          counted as cash out of pocket, so scenarios with a loan look better than they really are.</p>
+        <p class="fine"><b>Fair comparison:</b> every scenario sets aside the same
+          ${{ '{:,.2f}'.format(result.payment) }} a month (the Keep Loan payment). Whatever the loan doesn't need
+          is invested at your expected return.<br>
+          <b>Net worth</b> here = investments minus loan balance. Your home and other assets are the same in
+          every scenario, so they're left out; the differences between rows are what matter.
+          Returns are assumed steady every year; taxes and market swings aren't included.</p>
       {% else %}
         <div class="empty">Enter your numbers and click <strong>Analyze</strong>.</div>
       {% endif %}

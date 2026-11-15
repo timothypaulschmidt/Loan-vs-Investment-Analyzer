@@ -22,6 +22,20 @@ Get started quickly! See the [Initial Deployment Guide](docs/INITIAL_DEPLOYMENT.
 
 To use a different port: `set PORT=8075` (Windows cmd) before `python src/main.py`.
 
+## Running tests
+```bat
+pip install -r requirements-dev.txt
+python -m pytest
+```
+`requirements-dev.txt` adds pytest on top of the app's packages. Tests live in `tests/` and are not copied into the Docker image.
+
+## How the comparison works
+Every scenario sets aside the same monthly budget: the Keep Loan payment. Each month the loan payment comes out of that budget and whatever is left over is invested at the expected return. So paying the loan off early is credited with the payments it frees up.
+
+After a partial payoff you can choose **Same payment, pay off sooner** (most loans) or **Lower my payment** (only if the lender recasts the loan).
+
+**Net worth** = investments minus loan balance. Your home and other assets are the same in every scenario, so they are left out.
+
 ## Setup (Docker)
 1. Build the image: `docker build -t loan-vs-investment-analyzer .`
 2. Run the container: `docker run -p 8070:8070 loan-vs-investment-analyzer`
@@ -38,7 +52,8 @@ To use a different port: `set PORT=8075` (Windows cmd) before `python src/main.p
 | `src/app.py` | Web routes: show the form, validate, run the analysis |
 | `src/templates/index.html` | The HTML page |
 | `src/utils/helpers.py` | Parses and validates typed numbers (`$`, commas, `%`) |
-| `src/utils/loan_math.py` | Loan and investment calculations |
+| `src/utils/loan_math.py` | Loan and investment calculations (month-by-month simulation) |
+| `tests/` | pytest unit tests |
 
 ## Ports used in the home lab
 | App | Port |

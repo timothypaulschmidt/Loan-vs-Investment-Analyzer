@@ -1,0 +1,3 @@
+# Everything the app needs, plus tools only used while developing (not in the Docker image)
+-r requirements.txt
+pytest==9.2.0
