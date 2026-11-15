@@ -103,6 +103,21 @@
     .fine b { color: var(--text); }
     td .sub { display: block; font-size: .75rem; color: var(--muted); font-weight: 400; margin-top: 2px; }
 
+    /* Projection panel */
+    .verdict { border: 1px solid var(--line); border-left: 4px solid var(--accent); border-radius: 10px;
+               padding: 16px 18px; margin-bottom: 20px; }
+    .verdict .eyebrow { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
+    .verdict h3 { margin: 4px 0 2px; font-size: 1.35rem; }
+    .verdict .win { color: var(--accent); }
+    .verdict p { margin: 6px 0; }
+    .verdict .flip { background: var(--accent-soft); border-radius: 8px; padding: 8px 12px; margin-top: 10px; }
+    .whatif { margin-top: 12px; }
+    .whatif summary { cursor: pointer; font-weight: 600; font-size: .9rem; color: var(--accent); margin-bottom: 6px; }
+    .whatif table th, .whatif table td { padding: 7px 8px; font-size: .88rem; }
+    .whatif tr.current td { font-weight: 700; background: var(--accent-soft); }
+    .sub-inline { color: var(--muted); font-weight: 400; }
+    .disclaimer { color: var(--muted); font-size: .78rem; margin-top: 10px !important; }
+
     /* Radio choice: after a partial payoff */
     .choice { border: 0; margin: 0 0 12px; padding: 0; }
     .choice legend { font-size: .9rem; font-weight: 600; margin-bottom: 6px; padding: 0; }
@@ -186,6 +201,66 @@
           <span class="chip">Looking <b>{{ v.scenario_years }} yrs</b> ahead</span>
         </div>
         {% if result.note %}<div class="note">{{ result.note }}</div>{% endif %}
+
+        {#- ---------- Projection panel: the answer first, details below ---------- -#}
+        {% set p = result.projection %}
+        {% if p %}
+        <div class="verdict">
+          <div class="eyebrow">Projection after {{ result.years }} years</div>
+          {% if p.is_tie %}
+            <h3>It's a tie: the scenarios end up about the same.</h3>
+          {% else %}
+            <h3><span class="win">{{ p.winner }}</span> comes out ahead</h3>
+            <p class="margins">
+              {%- for a in p.ahead_of -%}
+                by <b>{{ money(a.by) }}</b> over {{ a.name }}{{ ', and ' if not loop.last else '.' }}
+              {%- endfor -%}
+            </p>
+          {% endif %}
+
+          {% set be = p.break_even %}
+          {% set assumed = values.investment_return * 100 %}
+          {% if be %}
+            <p class="flip">
+              <b>Where it flips:</b> if your investments earn
+              <b>{{ 'less' if be.direction == 'below' else 'more' }} than {{ '%.2f' | format(be.rate * 100) }}%</b> a year,
+              <b>{{ be.new_leader }}</b> comes out ahead instead.
+              That's {{ '%.2f' | format((assumed - be.rate * 100) | abs) }} points
+              {{ 'below' if be.direction == 'below' else 'above' }} the {{ '{:g}'.format(assumed) }}% you assumed.
+            </p>
+          {% else %}
+            <p class="flip"><b>Where it flips:</b> it doesn't. {{ p.winner }} stays ahead for any return from -20% to 30%.</p>
+          {% endif %}
+
+          <details class="whatif" open>
+            <summary>What if returns are different?</summary>
+            <div class="table-scroll">
+              <table>
+                <thead>
+                  <tr><th>Annual return</th>
+                    {% for name in p.scenario_names %}<th>{{ name }}</th>{% endfor %}
+                    <th>Ahead</th></tr>
+                </thead>
+                <tbody>
+                  {% for row in p.what_if %}
+                  <tr class="{{ 'current' if row.is_current }}">
+                    <td>{{ '{:g}'.format((row.rate * 100) | round(2)) }}%{% if row.is_current %} <small class="sub-inline">(yours)</small>{% endif %}</td>
+                    {% for name in p.scenario_names %}<td>{{ money(row.nets[name]) }}</td>{% endfor %}
+                    <td>{{ row.leader }}</td>
+                  </tr>
+                  {% endfor %}
+                </tbody>
+              </table>
+            </div>
+          </details>
+
+          <p class="disclaimer">A projection from your assumptions (the same return every year, no taxes or market
+            swings), not a prediction or financial advice.</p>
+        </div>
+        {% elif result.rows | length == 1 %}
+          <div class="note">Enter a partial payoff amount (or an investment that covers the loan) to compare scenarios.</div>
+        {% endif %}
+
         <div class="table-scroll">
           <table>
             <thead>

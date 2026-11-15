@@ -7,6 +7,7 @@ from fastapi.templating import Jinja2Templates
 from utils.helpers import parse_number
 from utils.loan_math import (monthly_payment, remaining_balance, simulate_scenario,
                              PAY_OFF_SOONER, RECAST)
+from utils.projection import project
 
 # Find the templates folder next to this file, no matter where Python is started from
 BASE_DIR = Path(__file__).resolve().parent
@@ -84,7 +85,10 @@ def analyze(v):
     principal_paid = v["loan_balance"] - balance_after
     interest_paid = total_paid - principal_paid
 
-    scenarios = {"Keep Loan": 0, "Partial Payoff": v["partial_payoff"]}
+    scenarios = {"Keep Loan": 0}
+    # Partial payoff only makes sense between $0 and the whole loan (otherwise it duplicates a row)
+    if 0 < v["partial_payoff"] < v["loan_balance"]:
+        scenarios["Partial Payoff"] = v["partial_payoff"]
     note = None
     # Full payoff is only possible if the investment can cover the whole loan
     if v["investment_balance"] >= v["loan_balance"]:
@@ -107,7 +111,8 @@ def analyze(v):
                      "payoff_text": describe_payoff(r["payoff_month"], v["loan_years"])})
 
     best = max(rows, key=lambda r: r["net"])["name"]
-    return {"rows": rows, "best": best, "note": note, "payment": payment,
+    projection = project(scenarios, v)
+    return {"rows": rows, "best": best, "note": note, "payment": payment, "projection": projection,
             "principal_paid": principal_paid, "interest_paid": interest_paid,
             "years": v["scenario_years"]}
 

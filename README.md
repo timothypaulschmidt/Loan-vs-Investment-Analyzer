@@ -34,6 +34,8 @@ Every scenario sets aside the same monthly budget: the Keep Loan payment. Each m
 
 After a partial payoff you can choose **Same payment, pay off sooner** (most loans) or **Lower my payment** (only if the lender recasts the loan).
 
+**Projection panel:** the results open with which scenario comes out ahead and by how much, the *break-even return* where the answer flips, and a what-if table at returns 2 and 4 points lower and higher. It is a projection from your assumptions (steady returns, no taxes), not a prediction or financial advice.
+
 **Net worth** = investments minus loan balance. Your home and other assets are the same in every scenario, so they are left out.
 
 ## Setup (Docker)
@@ -53,6 +55,7 @@ After a partial payoff you can choose **Same payment, pay off sooner** (most loa
 | `src/templates/index.html` | The HTML page |
 | `src/utils/helpers.py` | Parses and validates typed numbers (`$`, commas, `%`) |
 | `src/utils/loan_math.py` | Loan and investment calculations (month-by-month simulation) |
+| `src/utils/projection.py` | Compares scenarios: winner, margins, break-even return, what-if table |
 | `tests/` | pytest unit tests |
 
 ## Ports used in the home lab
