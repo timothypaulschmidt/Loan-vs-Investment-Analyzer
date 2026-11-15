@@ -76,6 +76,22 @@
     .input span + input { padding-left: 0; }
     .field.has-error .input { border-color: var(--error); }
     .field .error { color: var(--error); font-size: .85rem; margin-top: 4px; }
+    .field .hint { color: var(--muted); font-size: .8rem; line-height: 1.4; margin-top: 4px; }
+
+    /* First-visit guide */
+    .guide { padding: 8px 4px; max-width: 640px; }
+    .guide-intro { margin: 0 0 12px; }
+    .guide ol { margin: 0; padding-left: 22px; }
+    .guide li { margin-bottom: 8px; }
+
+    /* How this works (FAQ) */
+    .faq { border-top: 1px solid var(--line); margin-top: 24px; padding-top: 16px; }
+    .faq h3 { font-size: 1rem; margin: 0 0 8px; }
+    .faq details { border-bottom: 1px solid var(--line); }
+    .faq summary { cursor: pointer; padding: 10px 0; font-weight: 600; font-size: .92rem; }
+    .faq summary:hover { color: var(--accent); }
+    .faq details p { margin: 0 0 12px; color: var(--muted); font-size: .9rem; max-width: 760px; }
+    .fine a { color: var(--accent); }
     button { width: 100%; margin-top: 8px; padding: 11px; border: 0; border-radius: 8px;
              background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 600; cursor: pointer; }
     button:hover { filter: brightness(1.08); }
@@ -158,17 +174,20 @@
       {% if errors %}<div class="alert">Please fix the highlighted fields.</div>{% endif %}
 
       {% for f in fields %}
-        {% if loop.index0 == 0 %}<div class="group-title">Loan</div>{% endif %}
-        {% if loop.index0 == 3 %}<div class="group-title">Investment</div>{% endif %}
-        {% if loop.index0 == 5 %}<div class="group-title">Scenario</div>{% endif %}
+        {% if loop.index0 == 0 %}<div class="group-title">Your loan, as of today</div>{% endif %}
+        {% if loop.index0 == 3 %}<div class="group-title">Your investments</div>{% endif %}
+        {% if loop.index0 == 5 %}<div class="group-title">What to compare</div>{% endif %}
         <div class="field {{ 'has-error' if f.name in errors }}">
           <label for="{{ f.name }}">{{ f.label }}</label>
           <div class="input">
             {% if f.prefix %}<span>{{ f.prefix }}</span>{% endif %}
             <input id="{{ f.name }}" name="{{ f.name }}" type="text" inputmode="decimal"
-                   placeholder="{{ f.placeholder }}" value="{{ form.get(f.name, '') }}">
+                   placeholder="{{ f.placeholder }}" value="{{ form.get(f.name, '') }}"
+                   aria-describedby="{{ f.name }}-hint">
             {% if f.suffix %}<span>{{ f.suffix }}</span>{% endif %}
           </div>
+          {#- The hint explains what to enter; screen readers read it via aria-describedby -#}
+          <div class="hint" id="{{ f.name }}-hint">{{ f.hint }}</div>
           {% if f.name in errors %}<div class="error">{{ errors[f.name] }}</div>{% endif %}
         </div>
         {#- Right after the partial payoff amount: what happens to the loan afterwards -#}
@@ -193,7 +212,7 @@
       {% if result %}
         {%- set v = values %}
         <div class="inputs-summary">
-          <span class="chip">Loan <b>${{ '{:,.0f}'.format(v.loan_balance) }}</b> at <b>{{ '{:g}'.format(v.interest_rate * 100) }}%</b> for <b>{{ v.loan_years }} yrs</b></span>
+          <span class="chip">Owe <b>${{ '{:,.0f}'.format(v.loan_balance) }}</b> at <b>{{ '{:g}'.format(v.interest_rate * 100) }}%</b>, <b>{{ v.loan_years }} yrs</b> left</span>
           <span class="chip">Invested <b>${{ '{:,.0f}'.format(v.investment_balance) }}</b> at <b>{{ '{:g}'.format(v.investment_return * 100) }}%</b>/yr</span>
           <span class="chip">Partial payoff <b>${{ '{:,.0f}'.format(v.partial_payoff) }}</b>,
             <b>{{ 'lower payment' if v.payoff_mode == 'recast' else 'pay off sooner' }}</b></span>
@@ -298,15 +317,62 @@
           <div class="stat"><div class="label">Interest paid in {{ result.years }} years</div>
             <div class="value">{{ money(result.interest_paid) }}</div></div>
         </div>
-        <p class="fine"><b>Fair comparison:</b> every scenario sets aside the same
-          ${{ '{:,.2f}'.format(result.payment) }} a month (the Keep Loan payment). Whatever the loan doesn't need
-          is invested at your expected return.<br>
-          <b>Net worth</b> here = investments minus loan balance. Your home and other assets are the same in
-          every scenario, so they're left out; the differences between rows are what matter.
-          Returns are assumed steady every year; taxes and market swings aren't included.</p>
+        <p class="fine"><b>Net worth</b> = investments minus loan balance. Every scenario sets aside the same
+          ${{ '{:,.2f}'.format(result.payment) }} a month. See <a href="#how-it-works">How this works</a>.</p>
       {% else %}
-        <div class="empty">Enter your numbers and click <strong>Analyze</strong>.</div>
+        {#- First visit only: a 3-step guide. It disappears once results are shown. -#}
+        <div class="guide">
+          <p class="guide-intro">Compare keeping your loan and staying invested with using your investments
+            to pay the loan down. You'll see which comes out ahead, by how much, and what would change the answer.</p>
+          <ol>
+            <li><b>Enter your loan as it is today</b>: what you owe, the rate, and the years left.</li>
+            <li><b>Enter the investments you could use</b> and the return you expect, plus a partial payoff amount to test.</li>
+            <li><b>Click Analyze.</b> Start with the projection at the top: who comes out ahead, and the return at which the answer flips.</li>
+          </ol>
+        </div>
       {% endif %}
+
+      {#- Always available, closed by default: short answers to the questions people actually ask -#}
+      <section class="faq" id="how-it-works">
+        <h3>How this works</h3>
+        <details>
+          <summary>What does "net worth" mean here?</summary>
+          <p>Your investments minus what you still owe on the loan. Your home, car and other savings are the same
+            in every scenario, so they're left out. The <em>differences</em> between scenarios are what matter.</p>
+        </details>
+        <details>
+          <summary>Why are loan payments invested in the payoff scenarios?</summary>
+          <p>To keep the comparison fair. Every scenario sets aside the same amount each month: the payment you'd
+            make if you kept the loan. If paying down the loan lowers or ends your payment, the money you no longer
+            spend on the loan is invested at your expected return. Otherwise paying off the loan would look worse
+            than it really is.</p>
+        </details>
+        <details>
+          <summary>"Same payment, pay off sooner" or "Lower my payment": which should I pick?</summary>
+          <p>Most loans work like <b>same payment, pay off sooner</b>: an extra lump sum shortens the loan, but your
+            monthly payment doesn't change. A lower payment only happens if your lender <b>recasts</b> the loan,
+            which some mortgage lenders offer on request, often for a fee. If you're not sure, ask your lender
+            or use the default.</p>
+        </details>
+        <details>
+          <summary>What does "where it flips" mean?</summary>
+          <p>It's the annual return at which a different scenario would come out ahead. The further your expected
+            return is from that number, the less the answer depends on your guess being exactly right. The
+            "what if" table shows the results at returns a few points higher and lower.</p>
+        </details>
+        <details>
+          <summary>What isn't included?</summary>
+          <p>Taxes (on investment gains or any loan interest deduction), ups and downs in the market (returns are
+            treated as the same every year), inflation, and fees. It also doesn't weigh how easily you can get to
+            your money: cash in investments can be sold if you need it, while money paid into a loan generally
+            can't be taken back out.</p>
+        </details>
+        <details>
+          <summary>Is this financial advice?</summary>
+          <p>No. It's a projection from the numbers you enter, to help you compare options. For a decision this
+            size, consider talking it through with a financial professional.</p>
+        </details>
+      </section>
     </section>
   </div>
 </div>
