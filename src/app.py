@@ -20,19 +20,29 @@ MAX_AMOUNT = 1_000_000_000  # $1 billion: stops absurd values like 1e308
 # Every form field in one place: the HTML form and the validation both use this list.
 # "limits" are passed straight to parse_number().
 FIELDS = [
-    {"name": "loan_balance", "label": "Loan balance", "placeholder": "$250,000", "prefix": "$",
+    # Loan, as it stands today
+    {"name": "loan_balance", "label": "Loan balance today", "placeholder": "250,000", "prefix": "$",
+     "hint": "What you owe right now, not the original loan amount.",
      "limits": {"min_value": 1, "max_value": MAX_AMOUNT}},
     {"name": "interest_rate", "label": "Loan interest rate", "placeholder": "2.99", "suffix": "%",
+     "hint": "The annual rate on your loan statement.",
      "limits": {"min_value": 0, "max_value": 100, "is_percent": True}},
-    {"name": "loan_years", "label": "Loan term", "placeholder": "30", "suffix": "years",
+    {"name": "loan_years", "label": "Years left on the loan", "placeholder": "26", "suffix": "years",
+     "hint": "Remaining term, not the original. 4 years into a 30-year mortgage? Enter 26.",
      "limits": {"min_value": 1, "max_value": 50, "whole_number": True}},
-    {"name": "investment_balance", "label": "Investment amount", "placeholder": "$250,000", "prefix": "$",
+    # Investments
+    {"name": "investment_balance", "label": "Investments you could use", "placeholder": "250,000", "prefix": "$",
+     "hint": "Money you could put toward the loan instead of keeping it invested.",
      "limits": {"min_value": 0, "max_value": MAX_AMOUNT}},
     {"name": "investment_return", "label": "Expected annual return", "placeholder": "10.1", "suffix": "%",
+     "hint": "Your best guess per year, long-run. Not sure? \"Where it flips\" shows how much this guess matters.",
      "limits": {"min_value": -100, "max_value": 100, "is_percent": True}},
-    {"name": "partial_payoff", "label": "Partial payoff amount", "placeholder": "$100,000", "prefix": "$",
+    # What to compare
+    {"name": "partial_payoff", "label": "Partial payoff amount", "placeholder": "100,000", "prefix": "$",
+     "hint": "A lump sum from your investments toward the loan today. Enter 0 to compare only keep vs. pay off in full.",
      "limits": {"min_value": 0, "max_value": MAX_AMOUNT}},
-    {"name": "scenario_years", "label": "Years into the loan to analyze", "placeholder": "4", "suffix": "years",
+    {"name": "scenario_years", "label": "Years to look ahead", "placeholder": "4", "suffix": "years",
+     "hint": "How far into the future to compare. Up to the years left on the loan.",
      "limits": {"min_value": 1, "max_value": 50, "whole_number": True}},
 ]
 
@@ -57,7 +67,7 @@ def validate(form):
 
     if not {"loan_years", "scenario_years"} & errors.keys():
         if values["scenario_years"] > values["loan_years"]:
-            errors["scenario_years"] = f"Can't be longer than the loan term ({values['loan_years']} years)."
+            errors["scenario_years"] = f"Can't be more than the years left on the loan ({values['loan_years']})."
 
     # The partial payoff choice (radio buttons): anything unexpected falls back to the default
     values["payoff_mode"] = RECAST if form.get("payoff_mode") == RECAST else PAY_OFF_SOONER

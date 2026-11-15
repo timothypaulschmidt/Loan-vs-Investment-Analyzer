@@ -29,6 +29,9 @@ python -m pytest
 ```
 `requirements-dev.txt` adds pytest on top of the app's packages. Tests live in `tests/` and are not copied into the Docker image.
 
+## Using the app
+Enter your loan **as it is today** (balance owed, rate, years left), the investments you could put toward it, and how far ahead to look. Each field has a short hint underneath, and the results page has a **How this works** section with answers to common questions.
+
 ## How the comparison works
 Every scenario sets aside the same monthly budget: the Keep Loan payment. Each month the loan payment comes out of that budget and whatever is left over is invested at the expected return. So paying the loan off early is credited with the payments it frees up.
 
