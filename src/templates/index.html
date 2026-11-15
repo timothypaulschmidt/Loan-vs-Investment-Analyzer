@@ -1,0 +1,155 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Loan vs Investment Analyzer</title>
+  <style>
+    :root {
+      --bg: #f4f2ee; --card: #ffffff; --text: #1d2a2a; --muted: #5d6b6b;
+      --line: #dcd8d0; --accent: #1f6f5c; --accent-soft: #e3f0ec;
+      --error: #b42318; --error-soft: #fdecea; --neg: #b42318; --on-accent: #ffffff;
+    }
+    @media (prefers-color-scheme: dark) {
+      :root {
+        --bg: #141a1a; --card: #1c2424; --text: #e6ecea; --muted: #9aa8a5;
+        --line: #2e3a3a; --accent: #5cc4a6; --accent-soft: #1f3631;
+        --error: #f28b82; --error-soft: #3a2220; --neg: #f28b82; --on-accent: #0f1f1b;
+      }
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0; background: var(--bg); color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+    }
+    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
+    header h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.01em; }
+    header p { margin: 4px 0 24px; color: var(--muted); }
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
+    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    /* Let grid columns shrink so a wide table scrolls inside its card instead of overflowing */
+    .layout > * { min-width: 0; }
+    .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
+    .card h2 { margin: 0 0 16px; font-size: 1.05rem; }
+    .group-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
+                   color: var(--muted); margin: 18px 0 8px; }
+    .group-title:first-of-type { margin-top: 0; }
+    .field { margin-bottom: 12px; }
+    .field label { display: block; font-size: .9rem; font-weight: 600; margin-bottom: 4px; }
+    .input { display: flex; align-items: center; border: 1px solid var(--line); border-radius: 8px;
+             background: var(--bg); overflow: hidden; }
+    .input:focus-within { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-soft); }
+    .input span { padding: 0 10px; color: var(--muted); font-size: .9rem; white-space: nowrap; }
+    .input input { flex: 1; min-width: 0; border: 0; background: transparent; color: var(--text);
+                   font: inherit; padding: 9px 10px; outline: none; }
+    .input span + input { padding-left: 0; }
+    .field.has-error .input { border-color: var(--error); }
+    .field .error { color: var(--error); font-size: .85rem; margin-top: 4px; }
+    button { width: 100%; margin-top: 8px; padding: 11px; border: 0; border-radius: 8px;
+             background: var(--accent); color: var(--on-accent); font: inherit; font-weight: 600; cursor: pointer; }
+    button:hover { filter: brightness(1.08); }
+    .alert { background: var(--error-soft); color: var(--error); border-radius: 8px;
+             padding: 10px 12px; font-size: .9rem; margin-bottom: 16px; }
+    .note { background: var(--accent-soft); border-radius: 8px; padding: 10px 12px;
+            font-size: .9rem; margin-bottom: 16px; }
+    .empty { color: var(--muted); text-align: center; padding: 48px 16px; }
+    .table-scroll { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; font-variant-numeric: tabular-nums; }
+    th, td { padding: 10px 8px; text-align: right; border-bottom: 1px solid var(--line); white-space: nowrap; }
+    th:first-child, td:first-child { text-align: left; }
+    th { font-size: .8rem; color: var(--muted); font-weight: 600; }
+    tr.best td { background: var(--accent-soft); }
+    tr.best td:first-child { font-weight: 700; }
+    .badge { display: inline-block; margin-left: 6px; font-size: .7rem; font-weight: 700;
+             background: var(--accent); color: var(--on-accent); border-radius: 999px; padding: 1px 8px; }
+    .neg { color: var(--neg); }
+    .stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; margin-top: 20px; }
+    @media (max-width: 560px) { .stats { grid-template-columns: 1fr; } }
+    .stat { border: 1px solid var(--line); border-radius: 10px; padding: 12px; }
+    .stat .label { font-size: .8rem; color: var(--muted); }
+    .stat .value { font-size: 1.2rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+    .fine { color: var(--muted); font-size: .8rem; margin-top: 16px; }
+  </style>
+</head>
+<body>
+{#- money(x): format a number as $1,234.56, with the minus sign before the $ -#}
+{% macro money(x) -%}
+  <span class="{{ 'neg' if x < 0 }}">{{ '-' if x < 0 }}${{ '{:,.2f}'.format(x | abs) }}</span>
+{%- endmacro %}
+<div class="wrap">
+  <header>
+    <h1>Loan vs Investment Analyzer</h1>
+    <p>Should you keep the loan and stay invested, or use the investment to pay the loan down?</p>
+  </header>
+
+  <div class="layout">
+    <!-- Left: the form. It posts back to the same page ("/"). -->
+    <form class="card" method="post" action="/" novalidate>
+      <h2>Your numbers</h2>
+      {% if errors %}<div class="alert">Please fix the highlighted fields.</div>{% endif %}
+
+      {% for f in fields %}
+        {% if loop.index0 == 0 %}<div class="group-title">Loan</div>{% endif %}
+        {% if loop.index0 == 3 %}<div class="group-title">Investment</div>{% endif %}
+        {% if loop.index0 == 5 %}<div class="group-title">Scenario</div>{% endif %}
+        <div class="field {{ 'has-error' if f.name in errors }}">
+          <label for="{{ f.name }}">{{ f.label }}</label>
+          <div class="input">
+            {% if f.prefix %}<span>{{ f.prefix }}</span>{% endif %}
+            <input id="{{ f.name }}" name="{{ f.name }}" type="text" inputmode="decimal"
+                   placeholder="{{ f.placeholder }}" value="{{ form.get(f.name, '') }}">
+            {% if f.suffix %}<span>{{ f.suffix }}</span>{% endif %}
+          </div>
+          {% if f.name in errors %}<div class="error">{{ errors[f.name] }}</div>{% endif %}
+        </div>
+      {% endfor %}
+      <button type="submit">Analyze</button>
+    </form>
+
+    <!-- Right: results (only after a valid submit) -->
+    <section class="card">
+      <h2>Results</h2>
+      {% if result %}
+        {% if result.note %}<div class="note">{{ result.note }}</div>{% endif %}
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Scenario</th>
+                <th>Paid toward loan</th>
+                <th>Investment after {{ result.years }}Y</th>
+                <th>Loan balance after {{ result.years }}Y</th>
+                <th>Net worth after {{ result.years }}Y</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for r in result.rows %}
+              <tr class="{{ 'best' if r.name == result.best }}">
+                <td>{{ r.name }}{% if r.name == result.best %}<span class="badge">Highest</span>{% endif %}</td>
+                <td>{{ money(r.payoff) }}</td>
+                <td>{{ money(r.investment) }}</td>
+                <td>{{ money(r.loan) }}</td>
+                <td>{{ money(r.net) }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        <div class="stats">
+          <div class="stat"><div class="label">Keep Loan monthly payment</div>
+            <div class="value">{{ money(result.payment) }}</div></div>
+          <div class="stat"><div class="label">Principal paid in {{ result.years }} years</div>
+            <div class="value">{{ money(result.principal_paid) }}</div></div>
+          <div class="stat"><div class="label">Interest paid in {{ result.years }} years</div>
+            <div class="value">{{ money(result.interest_paid) }}</div></div>
+        </div>
+        <p class="fine">Net worth = investment value minus loan balance. Monthly loan payments are not yet
+          counted as cash out of pocket, so scenarios with a loan look better than they really are.</p>
+      {% else %}
+        <div class="empty">Enter your numbers and click <strong>Analyze</strong>.</div>
+      {% endif %}
+    </section>
+  </div>
+</div>
+</body>
+</html>

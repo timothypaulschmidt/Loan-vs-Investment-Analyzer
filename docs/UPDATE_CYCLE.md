@@ -20,6 +20,7 @@ Edit your files in your IDE (VS Code, Spyder, etc.)
 venv\Scripts\activate
 python src/main.py
 ```
+Then open http://localhost:8070 in your browser.
 
 #### 3. Update Requirements (If You Added Packages)
 ```bash
@@ -78,6 +79,7 @@ docker push timothypaulschmidt/loan-vs-investment-analyzer
    ```bash
    python src/main.py
    ```
+   Then open http://localhost:8070 in your browser.
 
 #### Option B: Using Docker Only
 
@@ -88,8 +90,9 @@ docker push timothypaulschmidt/loan-vs-investment-analyzer
 
 2. Run the new version:
    ```bash
-   docker run -it timothypaulschmidt/loan-vs-investment-analyzer
+   docker run -p 8070:8070 timothypaulschmidt/loan-vs-investment-analyzer
    ```
+   Then open http://localhost:8070 in your browser.
 
 ---
 
@@ -111,11 +114,11 @@ Then on destination:
 ```bash
 # Pull specific version
 docker pull timothypaulschmidt/loan-vs-investment-analyzer:v1.0
-docker run -it timothypaulschmidt/loan-vs-investment-analyzer:v1.0
+docker run -p 8070:8070 timothypaulschmidt/loan-vs-investment-analyzer:v1.0
 
 # Or always get latest
 docker pull timothypaulschmidt/loan-vs-investment-analyzer:latest
-docker run -it timothypaulschmidt/loan-vs-investment-analyzer:latest
+docker run -p 8070:8070 timothypaulschmidt/loan-vs-investment-analyzer:latest
 ```
 
 ### Git Best Practices
