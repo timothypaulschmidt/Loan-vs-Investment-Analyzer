@@ -118,13 +118,13 @@ docker build -t loan-vs-investment-analyzer .
 ```
 
 ### 6. Run It
-Add the `-it` flags for interactive mode:
-- `-i` = interactive (keeps STDIN open so you can type input)
-- `-t` = tty (allocates a pseudo-terminal)
+The app is a web page on port **8070**. Map that port from your computer into the container with `-p`:
+- `-p 8070:8070` = `<port on your computer>:<port inside the container>`
 
 ```bash
-docker run -it loan-vs-investment-analyzer
+docker run -p 8070:8070 loan-vs-investment-analyzer
 ```
+Then open http://localhost:8070 in your browser. Press Ctrl+C to stop.
 
 ### 7. Tag Your Image for Docker Hub
 ```bash
@@ -185,6 +185,7 @@ git clone https://github.com/timothypaulschmidt/Loan-vs-Investment-Analyzer.git
    ```bash
    python src/main.py
    ```
+   Then open http://localhost:8070 in your browser (the port is also printed in the terminal).
 
 ---
 
@@ -205,9 +206,9 @@ docker pull timothypaulschmidt/loan-vs-investment-analyzer
 ```
 
 ### 4. Run It
-Add the `-it` flags for interactive mode:
+Map port 8070, then open http://localhost:8070 in your browser:
 ```bash
-docker run -it timothypaulschmidt/loan-vs-investment-analyzer
+docker run -p 8070:8070 timothypaulschmidt/loan-vs-investment-analyzer
 ```
 
 ---
