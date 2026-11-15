@@ -5,7 +5,8 @@ from fastapi import FastAPI, Request
 from fastapi.templating import Jinja2Templates
 
 from utils.helpers import parse_number
-from utils.loan_math import monthly_payment, remaining_balance, simulate_scenario
+from utils.loan_math import (monthly_payment, remaining_balance, simulate_scenario,
+                             PAY_OFF_SOONER, RECAST)
 
 # Find the templates folder next to this file, no matter where Python is started from
 BASE_DIR = Path(__file__).resolve().parent
@@ -57,11 +58,26 @@ def validate(form):
         if values["scenario_years"] > values["loan_years"]:
             errors["scenario_years"] = f"Can't be longer than the loan term ({values['loan_years']} years)."
 
+    # The partial payoff choice (radio buttons): anything unexpected falls back to the default
+    values["payoff_mode"] = RECAST if form.get("payoff_mode") == RECAST else PAY_OFF_SOONER
+
     return values, errors
 
 
+def describe_payoff(month, loan_years):
+    """Turn a payoff month into words, e.g. 'Paid off in 19.9 yrs (10.1 yrs early)'."""
+    if month is None:
+        return ""
+    if month == 0:
+        return "Paid off today"
+    years = month / 12
+    early = loan_years - years
+    text = f"Paid off in {years:.1f} yrs"
+    return text + (f" ({early:.1f} yrs early)" if early >= 0.05 else "")
+
+
 def analyze(v):
-    """Run the calculations (same logic the command-line version used)."""
+    """Run every scenario with the same monthly budget (the cash-flow fix)."""
     payment = monthly_payment(v["loan_balance"], v["interest_rate"], v["loan_years"])
     balance_after = remaining_balance(v["loan_balance"], v["interest_rate"], v["loan_years"], v["scenario_years"])
     total_paid = payment * v["scenario_years"] * 12
@@ -79,11 +95,16 @@ def analyze(v):
 
     rows = []
     for name, payoff in scenarios.items():
-        growth, remaining, net = simulate_scenario(
+        r = simulate_scenario(
             payoff, v["loan_balance"], v["interest_rate"], v["loan_years"],
-            v["investment_balance"], v["investment_return"], v["scenario_years"])
-        rows.append({"name": name, "payoff": payoff, "investment": growth,
-                     "loan": remaining, "net": net})
+            v["investment_balance"], v["investment_return"], v["scenario_years"],
+            v["payoff_mode"])
+        rows.append({"name": name, "payoff": payoff,
+                     "monthly_payment": r["monthly_payment"],
+                     "investment": r["investment_value"],
+                     "payments_invested": r["payments_invested"],
+                     "loan": r["loan_remaining"], "net": r["net_worth"],
+                     "payoff_text": describe_payoff(r["payoff_month"], v["loan_years"])})
 
     best = max(rows, key=lambda r: r["net"])["name"]
     return {"rows": rows, "best": best, "note": note, "payment": payment,
