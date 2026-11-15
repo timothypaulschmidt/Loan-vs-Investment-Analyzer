@@ -105,4 +105,5 @@ async def submit_form(request: Request):
     values, errors = validate(form)
     result = None if errors else analyze(values)
     return templates.TemplateResponse(request, "index.html",
-                                      {"fields": FIELDS, "form": form, "errors": errors, "result": result})
+                                      {"fields": FIELDS, "form": form, "errors": errors, "result": result,
+                                       "values": values})

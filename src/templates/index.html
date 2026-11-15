@@ -22,15 +22,46 @@
       margin: 0; background: var(--bg); color: var(--text);
       font: 16px/1.5 system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
-    .wrap { max-width: 1100px; margin: 0 auto; padding: 32px 16px 48px; }
+    .wrap { max-width: 1400px; margin: 0 auto; padding: 32px 16px 48px; }
     header h1 { margin: 0; font-size: 1.6rem; letter-spacing: -0.01em; }
     header p { margin: 4px 0 24px; color: var(--muted); }
-    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start; }
-    @media (max-width: 860px) { .layout { grid-template-columns: 1fr; } }
+    .layout { display: grid; grid-template-columns: 360px 1fr; gap: 24px; align-items: start;
+              transition: grid-template-columns .25s ease; }
+    /* Collapsed: the form shrinks to a thin rail so the results get the whole page */
+    .layout.collapsed { grid-template-columns: 52px 1fr; }
+    @media (max-width: 860px) { .layout, .layout.collapsed { grid-template-columns: 1fr; } }
     /* Let grid columns shrink so a wide table scrolls inside its card instead of overflowing */
     .layout > * { min-width: 0; }
     .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 20px; }
     .card h2 { margin: 0 0 16px; font-size: 1.05rem; }
+    .card-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 16px; }
+    .card-head h2 { margin: 0; }
+    .link-btn { background: none; border: 0; color: var(--accent); font: inherit; font-size: .9rem;
+                font-weight: 600; cursor: pointer; padding: 4px 6px; border-radius: 6px; width: auto; margin: 0; }
+    .link-btn:hover { background: var(--accent-soft); filter: none; }
+
+    /* The rail is only shown when collapsed */
+    .panel { padding: 0; }
+    .panel form { padding: 20px; }
+    .rail { display: none; width: 100%; margin: 0; background: none; border: 0; color: var(--text);
+            cursor: pointer; font: inherit; border-radius: 12px; }
+    .rail:hover { background: var(--accent-soft); filter: none; }
+    .rail .arrow { color: var(--accent); font-size: 1.2rem; font-weight: 700; }
+    .rail .label { font-size: .85rem; font-weight: 600; }
+    .layout.collapsed .panel form { display: none; }
+    .layout.collapsed .rail { display: flex; flex-direction: column; align-items: center; gap: 12px;
+                              padding: 16px 0; min-height: 220px; }
+    .layout.collapsed .rail .label { writing-mode: vertical-rl; transform: rotate(180deg); }
+    @media (max-width: 860px) {
+      .layout.collapsed .rail { flex-direction: row; justify-content: flex-start; min-height: 0; padding: 14px 20px; }
+      .layout.collapsed .rail .label { writing-mode: horizontal-tb; transform: none; }
+    }
+
+    /* One-line reminder of the inputs above the results */
+    .inputs-summary { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 16px; }
+    .chip { border: 1px solid var(--line); border-radius: 999px; padding: 3px 10px; font-size: .82rem;
+            color: var(--muted); }
+    .chip b { color: var(--text); font-weight: 600; }
     .group-title { font-size: .75rem; text-transform: uppercase; letter-spacing: .08em;
                    color: var(--muted); margin: 18px 0 8px; }
     .group-title:first-of-type { margin-top: 0; }
@@ -82,10 +113,21 @@
     <p>Should you keep the loan and stay invested, or use the investment to pay the loan down?</p>
   </header>
 
-  <div class="layout">
-    <!-- Left: the form. It posts back to the same page ("/"). -->
-    <form class="card" method="post" action="/" novalidate>
-      <h2>Your numbers</h2>
+  {#- Start collapsed when there are results to show; stay open on first visit or when there are errors -#}
+  <div id="layout" class="layout {{ 'collapsed' if result }}">
+    <!-- Left: the form panel. It posts back to the same page ("/"). -->
+    <aside class="card panel">
+      <!-- Shown only when collapsed: click to expand the form again -->
+      <button type="button" class="rail" data-toggle aria-label="Show your numbers">
+        <span class="arrow">›</span>
+        <span class="label">Your numbers</span>
+      </button>
+
+    <form method="post" action="/" novalidate>
+      <div class="card-head">
+        <h2>Your numbers</h2>
+        {% if result %}<button type="button" class="link-btn" data-toggle aria-label="Hide your numbers">‹ Hide</button>{% endif %}
+      </div>
       {% if errors %}<div class="alert">Please fix the highlighted fields.</div>{% endif %}
 
       {% for f in fields %}
@@ -105,11 +147,19 @@
       {% endfor %}
       <button type="submit">Analyze</button>
     </form>
+    </aside>
 
     <!-- Right: results (only after a valid submit) -->
     <section class="card">
       <h2>Results</h2>
       {% if result %}
+        {%- set v = values %}
+        <div class="inputs-summary">
+          <span class="chip">Loan <b>${{ '{:,.0f}'.format(v.loan_balance) }}</b> at <b>{{ '{:g}'.format(v.interest_rate * 100) }}%</b> for <b>{{ v.loan_years }} yrs</b></span>
+          <span class="chip">Invested <b>${{ '{:,.0f}'.format(v.investment_balance) }}</b> at <b>{{ '{:g}'.format(v.investment_return * 100) }}%</b>/yr</span>
+          <span class="chip">Partial payoff <b>${{ '{:,.0f}'.format(v.partial_payoff) }}</b></span>
+          <span class="chip">Looking <b>{{ v.scenario_years }} yrs</b> ahead</span>
+        </div>
         {% if result.note %}<div class="note">{{ result.note }}</div>{% endif %}
         <div class="table-scroll">
           <table>
@@ -125,7 +175,7 @@
             <tbody>
               {% for r in result.rows %}
               <tr class="{{ 'best' if r.name == result.best }}">
-                <td>{{ r.name }}{% if r.name == result.best %}<span class="badge">Highest</span>{% endif %}</td>
+                <td>{{ r.name }}{% if r.name == result.best %}<span class="badge">Highest net worth</span>{% endif %}</td>
                 <td>{{ money(r.payoff) }}</td>
                 <td>{{ money(r.investment) }}</td>
                 <td>{{ money(r.loan) }}</td>
@@ -151,5 +201,18 @@
     </section>
   </div>
 </div>
+<script>
+  // Collapse / expand the "Your numbers" panel. Every button marked data-toggle flips it.
+  const layout = document.getElementById("layout");
+  document.querySelectorAll("[data-toggle]").forEach(function (btn) {
+    btn.addEventListener("click", function () {
+      layout.classList.toggle("collapsed");
+      // When the form opens, put the cursor in the first field
+      if (!layout.classList.contains("collapsed")) {
+        document.getElementById("loan_balance").focus();
+      }
+    });
+  });
+</script>
 </body>
 </html>
